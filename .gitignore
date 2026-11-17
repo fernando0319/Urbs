@@ -1,0 +1,12 @@
+/config.php
+/storage/*.sqlite*
+/storage/logs/*
+!/storage/logs/.gitkeep
+/storage/private/*
+!/storage/private/.gitkeep
+/uploads/*
+!/uploads/.gitkeep
+!/uploads/.htaccess
+/node_modules/
+.DS_Store
+Thumbs.db
