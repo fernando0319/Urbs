@@ -67,14 +67,16 @@
         return r.json();
       }).then(function (data) {
         if (!data) return;
-        btn.classList.toggle('btn-supported', data.supported);
-        btn.classList.toggle('btn-primary', !data.supported);
-        btn.setAttribute('aria-pressed', data.supported ? 'true' : 'false');
-        btn.querySelector('[data-support-label]').textContent = data.supported ? 'Você apoia' : 'Apoiar';
-        var c = document.querySelector('[data-support-count]');
-        if (c) c.textContent = data.count;
-        var n = document.querySelector('[data-support-noun]');
-        if (n) n.textContent = data.count === 1 ? 'apoiador' : 'apoiadores';
+        // O cartão aparece duas vezes (celular e desktop): atualiza todas as cópias.
+        document.querySelectorAll('form[data-support] button').forEach(function (b) {
+          b.classList.toggle('btn-supported', data.supported);
+          b.classList.toggle('btn-primary', !data.supported);
+          b.setAttribute('aria-pressed', data.supported ? 'true' : 'false');
+          var label = b.querySelector('[data-support-label]');
+          if (label) label.textContent = data.supported ? 'Você apoia' : 'Apoiar';
+        });
+        document.querySelectorAll('[data-support-count]').forEach(function (c) { c.textContent = data.count; });
+        document.querySelectorAll('[data-support-noun]').forEach(function (n) { n.textContent = data.count === 1 ? 'apoiador' : 'apoiadores'; });
       }).catch(function () { form.submit(); })
         .finally(function () { btn.disabled = false; });
     });

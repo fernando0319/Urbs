@@ -47,6 +47,7 @@ function default_settings(): array
         'require_email_verification' => '1',
         'contact_email' => '',
         'about_text' => '',
+        'participation_text' => '',
     ];
 }
 
@@ -371,4 +372,90 @@ function report_reasons(): array
 function status_class(string $status): string
 {
     return 'status-' . preg_replace('/[^a-z_]/', '', $status);
+}
+
+// ---------------------------------------------------------------- Projetos comunitários
+
+function project_statuses(): array
+{
+    return [
+        'preparing' => 'Em preparação',
+        'fundraising' => 'Arrecadando',
+        'executing' => 'Em execução',
+        'done' => 'Concluído',
+        'cancelled' => 'Cancelado',
+    ];
+}
+
+/** Natureza da melhoria: evita que a comunidade pague, sem saber, por uma obrigação do município. */
+function duty_types(): array
+{
+    return [
+        'municipal_duty' => ['Obrigação do município', 'Serviço que a prefeitura já deveria prestar com o orçamento público (ex.: tapar buracos, iluminação pública). Contribuir não tira essa responsabilidade dela.'],
+        'complementary' => ['Melhoria complementar', 'Vai além do serviço básico (ex.: paisagismo, mobiliário diferenciado, arte urbana).'],
+        'independent' => ['Iniciativa comunitária', 'Projeto da própria comunidade, em espaço autorizado ou privado (ex.: horta comunitária, mutirão em área cedida).'],
+    ];
+}
+
+function auth_statuses(): array
+{
+    return [
+        'not_requested' => 'Ainda não solicitada',
+        'requested' => 'Solicitada, aguardando resposta',
+        'approved' => 'Autorizada',
+        'denied' => 'Negada',
+        'not_required' => 'Não é necessária',
+    ];
+}
+
+function pledge_kinds(): array
+{
+    return [
+        'money' => 'Dinheiro (compromisso)',
+        'machine' => 'Máquina ou equipamento',
+        'material' => 'Material',
+        'labor' => 'Trabalho voluntário',
+        'service' => 'Serviço profissional',
+        'other' => 'Outro',
+    ];
+}
+
+function pledge_statuses(): array
+{
+    return ['offered' => 'Oferecido', 'accepted' => 'Aceito', 'delivered' => 'Entregue', 'declined' => 'Não necessário', 'withdrawn' => 'Retirado'];
+}
+
+function project_document_kinds(): array
+{
+    return ['budget' => 'Orçamento', 'authorization' => 'Autorização ou protocolo', 'technical' => 'Documento técnico (ART/RRT, projeto)', 'other' => 'Outro'];
+}
+
+function suggestion_statuses(): array
+{
+    return ['open' => 'Aberta', 'considering' => 'Em análise pelo autor', 'incorporated' => 'Incorporada', 'declined' => 'Não incorporada'];
+}
+
+/** Valida e normaliza uma URL http(s) informada pelo usuário. */
+function clean_url(string $u): ?string
+{
+    $u = trim($u);
+    if ($u === '') {
+        return null;
+    }
+    if (!preg_match('#^https?://#i', $u)) {
+        $u = 'https://' . $u;
+    }
+    return filter_var($u, FILTER_VALIDATE_URL) && preg_match('#^https?://#i', $u) ? mb_substr($u, 0, 500) : null;
+}
+
+/** Data AAAA-MM-DD válida ou null. */
+function clean_date(string $d): ?string
+{
+    $dt = DateTimeImmutable::createFromFormat('!Y-m-d', $d);
+    return $dt && $dt->format('Y-m-d') === $d ? $d : null;
+}
+
+function fmt_day(?string $ymd): string
+{
+    return $ymd ? (DateTimeImmutable::createFromFormat('!Y-m-d', substr($ymd, 0, 10))?->format('d/m/Y') ?? '') : '';
 }

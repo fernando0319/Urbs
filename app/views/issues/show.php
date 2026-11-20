@@ -1,4 +1,25 @@
 <?php $author = author_of($issue); $isAuthor = (int)$issue['user_id'] === uid(); ?>
+<?php ob_start(); ?>
+    <div class="card support-card">
+      <p class="support-count"><strong data-support-count><?= (int)$issue['support_count'] ?></strong> <span data-support-noun><?= (int)$issue['support_count'] === 1 ? 'apoiador' : 'apoiadores' ?></span></p>
+      <?php if ((int)$issue['support_verified_count']): ?>
+        <p class="muted small"><?= icon('home') ?><?= (int)$issue['support_verified_count'] ?> moradores verificados</p>
+      <?php endif ?>
+      <?php if ($issue['moderation'] === 'approved'): ?>
+        <?php if (current_user()): ?>
+        <form method="post" action="<?= e(url('/ocorrencias/' . $issue['id'] . '/apoiar')) ?>" data-support>
+          <?= csrf_field() ?>
+          <button class="btn btn-block <?= $supported ? 'btn-supported' : 'btn-primary' ?>" aria-pressed="<?= $supported ? 'true' : 'false' ?>">
+            <?= icon('thumb') ?><span data-support-label><?= $supported ? 'Você apoia' : 'Apoiar' ?></span>
+          </button>
+        </form>
+        <?php else: ?>
+          <a class="btn btn-primary btn-block" href="<?= e(url('/entrar')) ?>"><?= icon('thumb') ?>Entrar para apoiar</a>
+        <?php endif ?>
+      <?php endif ?>
+      <p class="muted small">Um apoio por pessoa. Apoios mostram o interesse da comunidade e não têm caráter vinculante.</p>
+    </div>
+<?php $actionCard = ob_get_clean(); ?>
 <a class="back" href="<?= e(url('/ocorrencias')) ?>"><?= icon('arrow-left') ?>Ocorrências</a>
 
 <?php if ($issue['moderation'] !== 'approved'): ?>
@@ -16,6 +37,7 @@
       <?php if ($issue['category_name']): ?><span class="pill pill-cat" style="--cat:<?= e($issue['category_color']) ?>"><?= e($issue['category_name']) ?></span><?php endif ?>
     </div>
     <h1><?= e($issue['title']) ?></h1>
+    <div class="only-mobile"><?= $actionCard ?></div>
     <?php if ($issue['address']): ?><p class="meta"><?= icon('pin') ?><?= e($issue['address']) ?></p><?php endif ?>
 
     <?php if ($photos): ?>
@@ -58,6 +80,13 @@
       <?php endif ?>
     </section>
 
+    <?php if ($projects): ?>
+    <section class="section">
+      <h2><?= icon('users') ?>Projetos comunitários</h2>
+      <div class="grid grid-2"><?php foreach ($projects as $pj) echo partial('partials/project_card', ['pj' => $pj]); ?></div>
+    </section>
+    <?php endif ?>
+
     <?php if ($timeline): ?>
     <section class="section">
       <h2><?= icon('clock') ?>Histórico</h2>
@@ -79,25 +108,7 @@
   </div>
 
   <aside class="detail-side">
-    <div class="card support-card">
-      <p class="support-count"><strong data-support-count><?= (int)$issue['support_count'] ?></strong> <span data-support-noun><?= (int)$issue['support_count'] === 1 ? 'apoiador' : 'apoiadores' ?></span></p>
-      <?php if ((int)$issue['support_verified_count']): ?>
-        <p class="muted small"><?= icon('home') ?><?= (int)$issue['support_verified_count'] ?> moradores verificados</p>
-      <?php endif ?>
-      <?php if ($issue['moderation'] === 'approved'): ?>
-        <?php if (current_user()): ?>
-        <form method="post" action="<?= e(url('/ocorrencias/' . $issue['id'] . '/apoiar')) ?>" data-support>
-          <?= csrf_field() ?>
-          <button class="btn btn-block <?= $supported ? 'btn-supported' : 'btn-primary' ?>" aria-pressed="<?= $supported ? 'true' : 'false' ?>">
-            <?= icon('thumb') ?><span data-support-label><?= $supported ? 'Você apoia' : 'Apoiar' ?></span>
-          </button>
-        </form>
-        <?php else: ?>
-          <a class="btn btn-primary btn-block" href="<?= e(url('/entrar')) ?>"><?= icon('thumb') ?>Entrar para apoiar</a>
-        <?php endif ?>
-      <?php endif ?>
-      <p class="muted small">Um apoio por pessoa. Apoios mostram o interesse da comunidade e não têm caráter vinculante.</p>
-    </div>
+    <div class="only-desktop"><?= $actionCard ?></div>
 
     <div class="card">
       <div id="mini-map" class="map-mini" data-lat="<?= e($issue['lat']) ?>" data-lng="<?= e($issue['lng']) ?>"

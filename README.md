@@ -5,6 +5,7 @@ Plataforma comunitária e independente para melhorar a cidade:
 1. **Aponte**: moradores registram problemas e sugestões no mapa, com foto e localização.
 2. **Proponha**: qualquer pessoa (arquitetos, engenheiros, estudantes, ilustradores) envia propostas para aquele lugar, com antes e depois. Profissionais com CAU/CREA conferido recebem um selo de verificado.
 3. **Compare**: a comunidade compara as propostas para o mesmo lugar e indica a sua preferida.
+4. **Realize**: a proposta escolhida pode virar um **projeto comunitário**, com organização responsável, orçamento, autorização, contribuições e prestação de contas. A plataforma nunca recebe dinheiro.
 
 As propostas formam um acervo permanente de ideias para a cidade, com a autoria preservada.
 
@@ -20,6 +21,9 @@ As propostas formam um acervo permanente de ideias para a cidade, com a autoria 
 | Mapa | Leaflet + OpenStreetMap, marcadores por categoria, filtros, "toque para registrar aqui", localização do aparelho |
 | Ocorrências | Problema ou sugestão, até 5 fotos, local no mapa com endereço automático, aviso de ocorrências parecidas por perto, apoio (+1), comentários, status com histórico |
 | Propostas | Antes/depois com controle deslizante, galeria, PDFs (plantas), custo estimado, licença escolhida pelo autor (Creative Commons ou todos os direitos reservados) |
+| Sugestões e versões | Qualquer pessoa sugere alterações numa proposta (com croqui opcional); outros apoiam a sugestão; o autor responde e publica novas versões, com histórico e a imagem anterior preservada |
+| Projetos comunitários | Organização responsável (verificada pela moderação), natureza da melhoria (obrigação do município, complementar ou independente), orçamentos anexados, acompanhamento da autorização (protocolo, órgão, resposta), compromissos de contribuição antes da autorização, ofertas de máquinas, materiais e trabalho voluntário, link para campanha externa e Pix da organização (só depois de autorizado e verificado), despesas com nota fiscal, saldo e diário da obra |
+| Participar | Página explicando os meios legais de participação: Adote uma Praça, Lei de Acesso à Informação, ouvidoria, petição, audiências do orçamento, conselhos, Câmara, iniciativa popular, parcerias (MROSC), voluntariado, doações, Tribunal de Contas e ação popular, com campo para informações locais |
 | Comparação | Lado a lado com a situação atual; uma preferência por pessoa por lugar, que pode ser trocada; resultados de moradores verificados mostrados à parte; aviso de resultado não vinculante |
 | Painel público | Números, gráficos por status e categoria, linha do tempo |
 | Moderação | Fila para contas novas, denúncias, verificação de selos, bloqueio de usuários, papéis (moderador/admin), configurações, **registro público de ações** (transparência) |
@@ -98,7 +102,8 @@ app/bootstrap.php      configuração, sessão, cabeçalhos de segurança
 app/controllers/       páginas e ações, agrupadas por assunto
 app/lib/               banco, autenticação, uploads, e-mail, regras de negócio
 app/views/             templates PHP
-app/schema/mysql.sql   esquema do banco (o SQLite é derivado dele na instalação)
+app/schema/mysql.sql   esquema do banco (o SQLite é derivado dele; tabelas novas são criadas
+                       automaticamente ao subir SCHEMA_VERSION em app/bootstrap.php)
 assets/                CSS, JS, ícones e Leaflet (servidos localmente)
 uploads/               fotos e PDFs públicos (sem execução de scripts)
 storage/               logs, banco SQLite e documentos privados de verificação
@@ -110,6 +115,9 @@ PHP puro, sem framework, de propósito: qualquer pessoa consegue ler, alterar e 
 
 ## Próximos passos possíveis
 
+- Integração da arrecadação com um gateway de pagamento (Asaas, Mercado Pago, Pagar.me), com o dinheiro indo direto para a conta da organização e a meta atualizada automaticamente.
+- Liberação por etapas e devolução automática, com parceiro financeiro regulado.
+- Fundo solidário para comunidades com menor capacidade de arrecadação.
 - Verificação de telefone por SMS (OTP). Exige um provedor pago de SMS; o ponto de entrada seria o cadastro em `app/controllers/auth.php`.
 - Armazenamento de arquivos em S3/Cloudflare R2 quando o disco da hospedagem ficar pequeno.
 - Notificações por WhatsApp.

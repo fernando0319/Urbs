@@ -5,7 +5,8 @@ function mod_counts(): array
 {
     return [
         'queue' => (int)val("SELECT COUNT(*) FROM issues WHERE moderation = 'pending'")
-            + (int)val("SELECT COUNT(*) FROM proposals WHERE moderation = 'pending'"),
+            + (int)val("SELECT COUNT(*) FROM proposals WHERE moderation = 'pending'")
+            + (int)val("SELECT COUNT(*) FROM projects WHERE moderation = 'pending'"),
         'reports' => (int)val("SELECT COUNT(*) FROM reports WHERE status = 'open'"),
         'verifications' => (int)val("SELECT COUNT(*) FROM verification_requests WHERE status = 'pending'"),
     ];
@@ -20,7 +21,8 @@ function mod_queue(): void
     }
     unset($i);
     $proposals = all(PROPOSAL_SELECT . " WHERE p.moderation = 'pending' ORDER BY p.created_at");
-    render('mod/queue', ['title' => 'Moderação', 'issues' => $issues, 'proposals' => $proposals, 'counts' => mod_counts(), 'tab' => 'queue']);
+    $projects = all(PROJECT_SELECT . " WHERE pj.moderation = 'pending' ORDER BY pj.created_at");
+    render('mod/queue', ['title' => 'Moderação', 'issues' => $issues, 'proposals' => $proposals, 'projects' => $projects, 'counts' => mod_counts(), 'tab' => 'queue']);
 }
 
 function mod_action(): void
@@ -41,7 +43,7 @@ function mod_action(): void
         back('/moderacao/denuncias');
     }
 
-    $table = ['issue' => 'issues', 'proposal' => 'proposals', 'comment' => 'comments'][$type] ?? null;
+    $table = ['issue' => 'issues', 'proposal' => 'proposals', 'comment' => 'comments', 'project' => 'projects', 'suggestion' => 'proposal_suggestions'][$type] ?? null;
     $map = ['approve' => 'approved', 'reject' => 'rejected', 'hide' => 'hidden', 'restore' => 'approved'];
     if (!$table || !isset($map[$action])) {
         abort(404);
@@ -62,16 +64,22 @@ function mod_action(): void
         if ($map[$action] === 'approved') {
             q("UPDATE issues SET status = 'discussion', updated_at = ? WHERE id = ? AND status = 'open'", [now(), $row['issue_id']]);
         }
-    } else {
-        $row['target_type'] === 'issue' ? recount_issue((int)$row['target_id']) : recount_proposal((int)$row['target_id']);
+    } elseif ($type === 'comment') {
+        recount_target($row['target_type'], (int)$row['target_id']);
+    } elseif ($type === 'project') {
+        project_log($id, match ($map[$action]) {
+            'approved' => 'Projeto aprovado pela moderação.',
+            'rejected' => 'Projeto não aprovado pela moderação.' . ($note ? ' Motivo: ' . $note : ''),
+            default => 'Projeto ocultado pela moderação.' . ($note ? ' Motivo: ' . $note : ''),
+        });
     }
 
     // Avisa o autor sobre aprovação ou recusa.
-    if ($type !== 'comment' && in_array($action, ['approve', 'reject'], true)) {
+    if (in_array($type, ['issue', 'proposal', 'project'], true) && in_array($action, ['approve', 'reject'], true)) {
         $author = one('SELECT * FROM users WHERE id = ? AND deleted_at IS NULL', [$row['user_id']]);
         if ($author && $author['email']) {
-            $link = absolute_url(($type === 'issue' ? '/ocorrencias/' : '/propostas/') . $id);
-            $what = $type === 'issue' ? 'sua publicação' : 'sua proposta';
+            $link = absolute_url(['issue' => '/ocorrencias/', 'proposal' => '/propostas/', 'project' => '/projetos/'][$type] . $id);
+            $what = ['issue' => 'sua publicação', 'proposal' => 'sua proposta', 'project' => 'seu projeto comunitário'][$type];
             $msg = $action === 'approve'
                 ? "Olá, {$author['name']}!\n\nA moderação aprovou {$what} \"{$row['title']}\". Ela já está visível para todos:\n\n{$link}"
                 : "Olá, {$author['name']}!\n\nA moderação não aprovou {$what} \"{$row['title']}\"." . ($note ? "\n\nMotivo: $note" : '')
@@ -94,6 +102,8 @@ function mod_reports(): void
             'proposal' => one('SELECT id, title, moderation, summary AS body FROM proposals WHERE id = ?', [$r['target_id']]),
             'comment' => one('SELECT id, target_type, target_id, moderation, body FROM comments WHERE id = ?', [$r['target_id']]),
             'user' => one('SELECT id, name AS title, bio AS body, blocked_at FROM users WHERE id = ?', [$r['target_id']]),
+            'project' => one('SELECT id, title, moderation, plan AS body FROM projects WHERE id = ?', [$r['target_id']]),
+            'suggestion' => one('SELECT id, proposal_id, moderation, body FROM proposal_suggestions WHERE id = ?', [$r['target_id']]),
             default => null,
         };
     }

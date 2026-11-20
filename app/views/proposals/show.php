@@ -1,4 +1,19 @@
 <?php $a = author_of($p); $isAuthor = (int)$p['user_id'] === uid(); $lic = licenses()[$p['license']] ?? [$p['license'], '', '']; ?>
+<?php ob_start(); ?>
+    <div class="card support-card">
+      <p class="support-count"><strong><?= (int)$p['preference_count'] ?></strong> <?= (int)$p['preference_count'] === 1 ? 'pessoa prefere' : 'pessoas preferem' ?> esta proposta</p>
+      <?php if ((int)$p['preference_verified_count']): ?><p class="muted small"><?= (int)$p['preference_verified_count'] ?> moradores verificados</p><?php endif ?>
+      <?php if (current_user()): ?>
+      <form method="post" action="<?= e(url('/ocorrencias/' . $p['issue_id'] . '/preferir')) ?>">
+        <?= csrf_field() ?><input type="hidden" name="proposal_id" value="<?= (int)$p['id'] ?>">
+        <button class="btn btn-block <?= $preferred ? 'btn-supported' : 'btn-primary' ?>"><?= icon($preferred ? 'check' : 'thumb') ?><?= $preferred ? 'Sua preferida (desfazer)' : 'Prefiro esta' ?></button>
+      </form>
+      <?php else: ?>
+        <a class="btn btn-primary btn-block" href="<?= e(url('/entrar')) ?>">Entrar para escolher</a>
+      <?php endif ?>
+      <p class="muted small">Você escolhe uma proposta por lugar. Resultado não vinculante.</p>
+    </div>
+<?php $actionCard = ob_get_clean(); ?>
 <a class="back" href="<?= e(url('/ocorrencias/' . $p['issue_id'])) ?>"><?= icon('arrow-left') ?><?= e($p['issue_title']) ?></a>
 
 <?php if ($p['moderation'] !== 'approved'): ?>
@@ -9,6 +24,7 @@
   <div class="detail-main">
     <p class="eyebrow">Proposta para <?= e($p['issue_title']) ?></p>
     <h1><?= e($p['title']) ?></h1>
+    <?php if ($p['moderation'] === 'approved'): ?><div class="only-mobile"><?= $actionCard ?></div><?php endif ?>
     <p class="lead-sm"><?= e($p['summary']) ?></p>
 
     <?php if ($p['before_file']): ?>
@@ -62,6 +78,35 @@
     </section>
     <?php endif ?>
 
+    <?php if ($projects): ?>
+    <section class="section">
+      <h2><?= icon('users') ?>Projeto comunitário</h2>
+      <div class="grid grid-2"><?php foreach ($projects as $pj) echo partial('partials/project_card', ['pj' => $pj]); ?></div>
+    </section>
+    <?php endif ?>
+
+    <?php if ($p['moderation'] === 'approved'): ?>
+      <?= partial('partials/suggestions', ['p' => $p, 'suggestions' => $suggestions]) ?>
+    <?php endif ?>
+
+    <?php if ($revisions): ?>
+    <section class="section" id="versoes">
+      <h2><?= icon('clock') ?>Histórico de versões</h2>
+      <ol class="timeline">
+        <?php foreach ($revisions as $r): ?>
+        <li>
+          <span class="timeline-date"><?= e(fmt_date($r['created_at'], true)) ?></span>
+          <div><?= e($r['note']) ?>
+            <?php if ($r['incorporated']): ?><span class="muted small"> · incorporou <?= plural(count(explode(',', $r['incorporated'])), 'sugestão', 'sugestões') ?></span><?php endif ?>
+          </div>
+          <?php if ($r['prev_after_file']): ?><a href="<?= e(upload_url($r['prev_after_file'])) ?>" target="_blank" class="small">Ver imagem da versão anterior</a><?php endif ?>
+        </li>
+        <?php endforeach ?>
+        <li><span class="timeline-date"><?= e(fmt_date($p['created_at'], true)) ?></span><div>Primeira versão publicada</div></li>
+      </ol>
+    </section>
+    <?php endif ?>
+
     <?php if ($p['moderation'] === 'approved'): ?>
       <?= partial('partials/comments', ['comments' => $comments, 'type' => 'proposal', 'id' => (int)$p['id']]) ?>
     <?php endif ?>
@@ -80,25 +125,26 @@
       <div class="tags"><?= user_badges($a) ?></div>
       <dl class="facts">
         <dt>Publicada em</dt><dd><?= e(fmt_date($p['created_at'])) ?></dd>
+        <?php if ($revisions): ?><dt>Versão</dt><dd><a href="#versoes"><?= count($revisions) + 1 ?>ª, de <?= e(fmt_date($revisions[0]['created_at'])) ?></a></dd><?php endif ?>
         <dt>Custo estimado</dt><dd><?= $p['estimated_cost'] !== null ? e(money($p['estimated_cost'])) : 'Não informado' ?><?php if ($p['cost_notes']): ?><br><span class="muted small"><?= e($p['cost_notes']) ?></span><?php endif ?></dd>
         <dt>Licença</dt><dd><?php if ($lic[2]): ?><a href="<?= e($lic[2]) ?>" target="_blank" rel="noopener"><?= e($lic[0]) ?></a><?php else: ?><?= e($lic[0]) ?><?php endif ?><br><span class="muted small"><?= e($lic[1]) ?></span></dd>
       </dl>
     </div>
 
-    <?php if ($p['moderation'] === 'approved'): ?>
-    <div class="card support-card">
-      <p class="support-count"><strong><?= (int)$p['preference_count'] ?></strong> <?= (int)$p['preference_count'] === 1 ? 'pessoa prefere' : 'pessoas preferem' ?> esta proposta</p>
-      <?php if ((int)$p['preference_verified_count']): ?><p class="muted small"><?= (int)$p['preference_verified_count'] ?> moradores verificados</p><?php endif ?>
-      <?php if (current_user()): ?>
-      <form method="post" action="<?= e(url('/ocorrencias/' . $p['issue_id'] . '/preferir')) ?>">
-        <?= csrf_field() ?><input type="hidden" name="proposal_id" value="<?= (int)$p['id'] ?>">
-        <button class="btn btn-block <?= $preferred ? 'btn-supported' : 'btn-primary' ?>"><?= icon($preferred ? 'check' : 'thumb') ?><?= $preferred ? 'Sua preferida (desfazer)' : 'Prefiro esta' ?></button>
-      </form>
-      <?php else: ?>
-        <a class="btn btn-primary btn-block" href="<?= e(url('/entrar')) ?>">Entrar para escolher</a>
-      <?php endif ?>
-      <p class="muted small">Você escolhe uma proposta por lugar. Resultado não vinculante.</p>
+    <?php if ($isAuthor): ?>
+      <a class="btn btn-block" href="<?= e(url('/propostas/' . $p['id'] . '/editar')) ?>"><?= icon('pencil') ?>Editar proposta (nova versão)</a>
+    <?php endif ?>
+
+    <?php if ($p['moderation'] === 'approved' && !$projects && (($p['license'] ?? '') !== 'arr' || $isAuthor || is_mod())): ?>
+    <div class="card">
+      <h3>Tirar do papel</h3>
+      <p class="small">A comunidade gostou desta proposta? Organize um projeto comunitário com orçamento, autorização, contribuições e prestação de contas.</p>
+      <a class="btn btn-block" href="<?= e(url('/propostas/' . $p['id'] . '/projeto')) ?>"><?= icon('users') ?>Transformar em projeto comunitário</a>
     </div>
+    <?php endif ?>
+
+    <?php if ($p['moderation'] === 'approved'): ?>
+    <div class="only-desktop"><?= $actionCard ?></div>
     <?php endif ?>
 
     <div class="card notice-card">

@@ -130,6 +130,9 @@ function account_export(): void
         'comentarios' => all('SELECT * FROM comments WHERE user_id = ?', [$u['id']]),
         'apoios' => all('SELECT * FROM supports WHERE user_id = ?', [$u['id']]),
         'preferencias' => all('SELECT * FROM preferences WHERE user_id = ?', [$u['id']]),
+        'sugestoes' => all('SELECT * FROM proposal_suggestions WHERE user_id = ?', [$u['id']]),
+        'ofertas_e_compromissos' => all('SELECT * FROM project_pledges WHERE user_id = ?', [$u['id']]),
+        'projetos_organizados' => all('SELECT id, title, organization, status, created_at FROM projects WHERE user_id = ?', [$u['id']]),
         'denuncias_feitas' => all('SELECT * FROM reports WHERE user_id = ?', [$u['id']]),
         'pedidos_de_verificacao' => all('SELECT id, type, registry, notes, status, created_at, reviewed_at FROM verification_requests WHERE user_id = ?', [$u['id']]),
     ];
@@ -155,6 +158,12 @@ function account_delete(): void
     q('DELETE FROM preferences WHERE user_id = ?', [$u['id']]);
     q('DELETE FROM comments WHERE user_id = ?', [$u['id']]);
     q('DELETE FROM tokens WHERE user_id = ?', [$u['id']]);
+    $suggIds = array_column(all('SELECT DISTINCT suggestion_id FROM suggestion_supports WHERE user_id = ?', [$u['id']]), 'suggestion_id');
+    q('DELETE FROM suggestion_supports WHERE user_id = ?', [$u['id']]);
+    foreach ($suggIds as $sid) recount_suggestion((int)$sid);
+    foreach (all('SELECT id FROM proposal_suggestions WHERE user_id = ?', [$u['id']]) as $sg) delete_suggestion((int)$sg['id']);
+    q('DELETE FROM project_pledges WHERE user_id = ?', [$u['id']]);
+    // Projetos organizados pela pessoa continuam (prestação de contas é de interesse público), sem o nome dela; a moderação assume.
     foreach (all('SELECT file FROM verification_requests WHERE user_id = ?', [$u['id']]) as $vr) {
         delete_upload($vr['file'], 'storage/private');
     }
@@ -162,7 +171,10 @@ function account_delete(): void
 
     if (input('delete_content')) {
         foreach (all('SELECT id FROM proposals WHERE user_id = ?', [$u['id']]) as $p) {
-            delete_proposal((int)$p['id']);
+            // Propostas que viraram projeto de outras pessoas ficam (anônimas), para não apagar a prestação de contas delas.
+            if (!(int)val('SELECT COUNT(*) FROM projects WHERE proposal_id = ? AND user_id <> ?', [$p['id'], $u['id']])) {
+                delete_proposal((int)$p['id']);
+            }
         }
         foreach (all('SELECT id FROM issues WHERE user_id = ?', [$u['id']]) as $i) {
             // Ocorrências com propostas de outras pessoas ficam (anônimas) para não apagar o trabalho delas.

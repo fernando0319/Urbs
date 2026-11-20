@@ -54,3 +54,11 @@
   </div>
   <a class="btn btn-primary" href="<?= e(url('/ocorrencias', ['sort' => 'supports'])) ?>">Escolher um lugar para propor</a>
 </section>
+
+<section class="callout">
+  <div>
+    <h2>Participar vai além do aplicativo</h2>
+    <p>Ouvidoria, pedido de acesso à informação, audiências do orçamento, conselhos, "Adote uma praça", projeto de lei de iniciativa popular: veja os caminhos legais para cobrar, propor e cuidar da cidade.</p>
+  </div>
+  <a class="btn" href="<?= e(url('/participar')) ?>">Como participar</a>
+</section>

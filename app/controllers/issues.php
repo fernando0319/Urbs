@@ -143,6 +143,7 @@ function issue_show(string $id): void
         'proposals' => $proposals,
         'comments' => $comments,
         'timeline' => $timeline,
+        'projects' => all(PROJECT_SELECT . " WHERE pj.issue_id = ? AND pj.moderation = 'approved' ORDER BY pj.created_at", [$issue['id']]),
         'supported' => (bool)$supported,
         'leaflet' => true,
         'ogFile' => $photos[0]['file'] ?? null,
@@ -201,6 +202,7 @@ function issue_delete(string $id): void
         abort(404);
     }
     $others = (int)val('SELECT COUNT(*) FROM proposals WHERE issue_id = ? AND user_id <> ?', [$issue['id'], $u['id']]);
+    $others += (int)val('SELECT COUNT(*) FROM projects WHERE issue_id = ? AND user_id <> ?', [$issue['id'], $u['id']]);
     $isAuthor = (int)$issue['user_id'] === (int)$u['id'];
     if (!is_mod($u) && !($isAuthor && $others === 0)) {
         flash('warn', 'Esta ocorrência já tem propostas de outras pessoas e não pode mais ser excluída pelo autor. Fale com a moderação.');
@@ -285,13 +287,18 @@ function comment_target(string $type, int $id): ?array
     return match ($type) {
         'issue' => one("SELECT id, user_id FROM issues WHERE id = ? AND moderation = 'approved'", [$id]),
         'proposal' => one("SELECT id, user_id, issue_id FROM proposals WHERE id = ? AND moderation = 'approved'", [$id]),
+        'project' => one("SELECT id, user_id FROM projects WHERE id = ? AND moderation = 'approved'", [$id]),
         default => null,
     };
 }
 
 function target_url(string $type, int $id): string
 {
-    return $type === 'proposal' ? '/propostas/' . $id : '/ocorrencias/' . $id;
+    return match ($type) {
+        'proposal' => '/propostas/' . $id,
+        'project' => '/projetos/' . $id,
+        default => '/ocorrencias/' . $id,
+    };
 }
 
 function comment_create(): void
@@ -320,7 +327,7 @@ function comment_create(): void
         'moderation' => 'approved',
         'created_at' => now(),
     ]);
-    $type === 'issue' ? recount_issue($id) : recount_proposal($id);
+    recount_target($type, $id);
     redirect(target_url($type, $id) . '#comentarios');
 }
 
@@ -341,7 +348,7 @@ function comment_delete(string $id): void
         update('comments', ['moderation' => 'hidden'], 'id = :id', ['id' => $c['id']]);
         log_mod('hide', 'comment', (int)$c['id'], input('note'));
     }
-    $c['target_type'] === 'issue' ? recount_issue((int)$c['target_id']) : recount_proposal((int)$c['target_id']);
+    recount_target($c['target_type'], (int)$c['target_id']);
     flash('ok', 'Comentário removido.');
     redirect(target_url($c['target_type'], (int)$c['target_id']) . '#comentarios');
 }
@@ -352,7 +359,7 @@ function report_create(): void
     $type = input('target_type');
     $id = input_int('target_id');
     $reason = input('reason');
-    $table = ['issue' => 'issues', 'proposal' => 'proposals', 'comment' => 'comments', 'user' => 'users'][$type] ?? null;
+    $table = ['issue' => 'issues', 'proposal' => 'proposals', 'comment' => 'comments', 'user' => 'users', 'project' => 'projects', 'suggestion' => 'proposal_suggestions'][$type] ?? null;
     if (!$table || !one("SELECT id FROM $table WHERE id = ?", [$id]) || !array_key_exists($reason, report_reasons())) {
         flash('warn', 'Escolha um motivo para a denúncia.');
         back();

@@ -49,7 +49,9 @@ $shareImg = share_image_url($ogFile ?? null);
       <a href="<?= e(url('/mapa')) ?>" <?= $nav === 'map' ? 'aria-current="page"' : '' ?>>Mapa</a>
       <a href="<?= e(url('/ocorrencias')) ?>" <?= $nav === 'issues' ? 'aria-current="page"' : '' ?>>Ocorrências</a>
       <a href="<?= e(url('/propostas')) ?>" <?= $nav === 'proposals' ? 'aria-current="page"' : '' ?>>Propostas</a>
+      <a href="<?= e(url('/projetos')) ?>" <?= $nav === 'projects' ? 'aria-current="page"' : '' ?>>Projetos</a>
       <a href="<?= e(url('/painel')) ?>" <?= $nav === 'panel' ? 'aria-current="page"' : '' ?>>Painel</a>
+      <a href="<?= e(url('/participar')) ?>" <?= $nav === 'participate' ? 'aria-current="page"' : '' ?>>Participar</a>
     </nav>
     <div class="topbar-actions">
       <?php if ($u && is_mod($u)): ?>
@@ -82,6 +84,9 @@ $shareImg = share_image_url($ogFile ?? null);
     <p><strong><?= e($siteName) ?></strong> é uma plataforma comunitária e independente de participação cidadã. Os resultados de apoios e preferências não têm caráter vinculante.</p>
     <nav aria-label="Institucional">
       <a href="<?= e(url('/sobre')) ?>">Sobre</a>
+      <a href="<?= e(url('/participar')) ?>">Como participar</a>
+      <a href="<?= e(url('/projetos')) ?>">Projetos comunitários</a>
+      <a href="<?= e(url('/painel')) ?>">Painel</a>
       <a href="<?= e(url('/regras')) ?>">Regras</a>
       <a href="<?= e(url('/transparencia')) ?>">Transparência</a>
       <a href="<?= e(url('/privacidade')) ?>">Privacidade</a>

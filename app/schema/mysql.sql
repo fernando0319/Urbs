@@ -197,3 +197,122 @@ CREATE TABLE IF NOT EXISTS settings (
   k VARCHAR(60) PRIMARY KEY,
   v TEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------- v2: projetos comunitários e sugestões
+
+CREATE TABLE IF NOT EXISTS projects (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT UNSIGNED NOT NULL,
+  issue_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  title VARCHAR(160) NOT NULL,
+  plan TEXT NOT NULL,
+  duty_type VARCHAR(20) NOT NULL,
+  organization VARCHAR(160) NOT NULL,
+  organization_doc VARCHAR(30) NULL,
+  organization_verified_at DATETIME NULL,
+  goal_amount DECIMAL(14,2) NULL,
+  raised_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  raised_updated_at DATETIME NULL,
+  campaign_url VARCHAR(500) NULL,
+  payment_info TEXT NULL,
+  auth_status VARCHAR(20) NOT NULL DEFAULT 'not_requested',
+  auth_body VARCHAR(160) NULL,
+  auth_protocol VARCHAR(80) NULL,
+  auth_requested_at DATE NULL,
+  auth_decided_at DATE NULL,
+  auth_notes TEXT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'preparing',
+  moderation VARCHAR(20) NOT NULL DEFAULT 'pending',
+  comment_count INT NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_projects_proposal (proposal_id),
+  INDEX idx_projects_issue (issue_id),
+  INDEX idx_projects_mod (moderation, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS project_documents (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  project_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  kind VARCHAR(20) NOT NULL,
+  title VARCHAR(160) NOT NULL,
+  amount DECIMAL(14,2) NULL,
+  file VARCHAR(190) NOT NULL,
+  original_name VARCHAR(190) NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_pdocs_project (project_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS project_expenses (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  project_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  supplier VARCHAR(160) NULL,
+  amount DECIMAL(14,2) NOT NULL,
+  spent_on DATE NOT NULL,
+  file VARCHAR(190) NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_pexp_project (project_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS project_updates (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  project_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  kind VARCHAR(20) NOT NULL DEFAULT 'post',
+  body TEXT NOT NULL,
+  photo VARCHAR(190) NULL,
+  photo_thumb VARCHAR(190) NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_pupd_project (project_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS project_pledges (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  project_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  kind VARCHAR(20) NOT NULL,
+  description VARCHAR(500) NOT NULL,
+  amount DECIMAL(14,2) NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'offered',
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  INDEX idx_pledges_project (project_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS proposal_suggestions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  body TEXT NOT NULL,
+  image VARCHAR(190) NULL,
+  image_thumb VARCHAR(190) NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'open',
+  author_reply VARCHAR(1000) NULL,
+  replied_at DATETIME NULL,
+  support_count INT NOT NULL DEFAULT 0,
+  moderation VARCHAR(20) NOT NULL DEFAULT 'approved',
+  created_at DATETIME NOT NULL,
+  INDEX idx_sugg_proposal (proposal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS suggestion_supports (
+  user_id INT UNSIGNED NOT NULL,
+  suggestion_id INT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (user_id, suggestion_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS proposal_revisions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  note VARCHAR(1000) NOT NULL,
+  prev_after_file VARCHAR(190) NULL,
+  incorporated VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL,
+  INDEX idx_rev_proposal (proposal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

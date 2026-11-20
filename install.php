@@ -100,6 +100,7 @@ if ($ok && ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
                 'map_lng' => $v('map_lng'),
                 'map_zoom' => $v('map_zoom', '15'),
                 'contact_email' => $adminEmail,
+                'schema_version' => '2',
             ] as $k => $val) {
                 save_setting($k, $val);
             }

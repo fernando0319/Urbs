@@ -117,12 +117,15 @@ function mod_action_label(string $a): string
         'revoke_resident' => 'removeu o selo de morador de',
         'role' => 'alterou o papel de',
         'dismiss_report' => 'arquivou uma denúncia sobre',
+        'verify_org' => 'verificou a organização responsável pelo',
+        'unverify_org' => 'removeu a verificação da organização do',
+        'project_status' => 'mudou o status do',
     ][$a] ?? $a;
 }
 
 function target_label(string $t): string
 {
-    return ['issue' => 'ocorrência', 'proposal' => 'proposta', 'comment' => 'comentário', 'user' => 'usuário'][$t] ?? $t;
+    return ['issue' => 'ocorrência', 'proposal' => 'proposta', 'comment' => 'comentário', 'user' => 'usuário', 'project' => 'projeto comunitário', 'suggestion' => 'sugestão'][$t] ?? $t;
 }
 
 function categories(bool $onlyActive = true): array
@@ -186,6 +189,16 @@ function delete_proposal(int $id): void
     delete_upload($p['before_file']);
     delete_upload($p['after_file']);
     delete_upload($p['cover_thumb']);
+    foreach (all('SELECT id FROM projects WHERE proposal_id = ?', [$id]) as $pj) {
+        delete_project((int)$pj['id']);
+    }
+    foreach (all('SELECT id FROM proposal_suggestions WHERE proposal_id = ?', [$id]) as $s) {
+        delete_suggestion((int)$s['id']);
+    }
+    foreach (all('SELECT prev_after_file FROM proposal_revisions WHERE proposal_id = ? AND prev_after_file IS NOT NULL', [$id]) as $r) {
+        delete_upload($r['prev_after_file']);
+    }
+    q('DELETE FROM proposal_revisions WHERE proposal_id = ?', [$id]);
     q('DELETE FROM proposal_files WHERE proposal_id = ?', [$id]);
     q('DELETE FROM preferences WHERE proposal_id = ?', [$id]);
     q("DELETE FROM comments WHERE target_type = 'proposal' AND target_id = ?", [$id]);
@@ -209,4 +222,116 @@ function delete_issue(int $id): void
     q('DELETE FROM status_updates WHERE issue_id = ?', [$id]);
     q("DELETE FROM comments WHERE target_type = 'issue' AND target_id = ?", [$id]);
     q('DELETE FROM issues WHERE id = ?', [$id]);
+}
+
+// ---------------------------------------------------------------- Projetos comunitários
+
+const PROJECT_SELECT = 'SELECT pj.*, u.name AS author_name, u.avatar AS author_avatar, u.deleted_at AS author_deleted_at,
+    u.professional_verified_at AS author_professional_verified_at, u.resident_verified_at AS author_resident_verified_at,
+    u.role AS author_role, u.registry AS author_registry,
+    p.title AS proposal_title, p.cover_thumb AS cover_thumb, p.after_file AS proposal_after_file, p.license AS proposal_license,
+    i.title AS issue_title, i.address AS issue_address
+  FROM projects pj
+  JOIN users u ON u.id = pj.user_id
+  JOIN proposals p ON p.id = pj.proposal_id
+  JOIN issues i ON i.id = pj.issue_id';
+
+function find_project(int $id): ?array
+{
+    return one(PROJECT_SELECT . ' WHERE pj.id = ?', [$id]);
+}
+
+/** Responsável pelo projeto ou moderação. */
+function can_manage_project(array $pj, ?array $u = null): bool
+{
+    $u ??= current_user();
+    return $u && ((int)$pj['user_id'] === (int)$u['id'] || is_mod($u));
+}
+
+/**
+ * A arrecadação só pode ser aberta quando o projeto está aprovado pela moderação,
+ * a organização foi verificada e a autorização foi obtida (ou não é necessária).
+ * Retorna a lista do que falta (vazia = pode arrecadar).
+ */
+function fundraising_blockers(array $pj): array
+{
+    $missing = [];
+    if ($pj['moderation'] !== 'approved') $missing[] = 'aprovação do projeto pela moderação';
+    if (!$pj['organization_verified_at']) $missing[] = 'verificação da organização responsável pela moderação';
+    if (!in_array($pj['auth_status'], ['approved', 'not_required'], true)) $missing[] = 'autorização do órgão responsável pelo espaço';
+    if (!$pj['campaign_url'] && !trim((string)$pj['payment_info'])) $missing[] = 'link da campanha ou dados para contribuição';
+    return $missing;
+}
+
+/** Registra um evento no diário do projeto (mudanças de status, autorização etc.). */
+function project_log(int $projectId, string $body, string $kind = 'event'): void
+{
+    insert('project_updates', [
+        'project_id' => $projectId,
+        'user_id' => uid() ?: 0,
+        'kind' => $kind,
+        'body' => mb_substr($body, 0, 2000),
+        'created_at' => now(),
+    ]);
+    update('projects', ['updated_at' => now()], 'id = :id', ['id' => $projectId]);
+}
+
+function recount_project(int $id): void
+{
+    $c = (int)val("SELECT COUNT(*) FROM comments WHERE target_type = 'project' AND target_id = ? AND moderation = 'approved'", [$id]);
+    update('projects', ['comment_count' => $c], 'id = :id', ['id' => $id]);
+}
+
+/** Totais de compromissos em dinheiro (intenções, não pagamentos) e de despesas comprovadas. */
+function project_totals(int $id): array
+{
+    return [
+        'committed' => (float)val("SELECT COALESCE(SUM(amount), 0) FROM project_pledges WHERE project_id = ? AND kind = 'money' AND status IN ('offered','accepted','delivered')", [$id]),
+        'committed_people' => (int)val("SELECT COUNT(DISTINCT user_id) FROM project_pledges WHERE project_id = ? AND kind = 'money' AND status IN ('offered','accepted','delivered')", [$id]),
+        'spent' => (float)val('SELECT COALESCE(SUM(amount), 0) FROM project_expenses WHERE project_id = ?', [$id]),
+    ];
+}
+
+function delete_project(int $id): void
+{
+    foreach (all('SELECT file FROM project_documents WHERE project_id = ?', [$id]) as $d) delete_upload($d['file']);
+    foreach (all('SELECT file FROM project_expenses WHERE project_id = ? AND file IS NOT NULL', [$id]) as $d) delete_upload($d['file']);
+    foreach (all('SELECT photo, photo_thumb FROM project_updates WHERE project_id = ? AND photo IS NOT NULL', [$id]) as $d) {
+        delete_upload($d['photo']);
+        delete_upload($d['photo_thumb']);
+    }
+    foreach (['project_documents', 'project_expenses', 'project_updates', 'project_pledges'] as $t) {
+        q("DELETE FROM $t WHERE project_id = ?", [$id]);
+    }
+    q("DELETE FROM comments WHERE target_type = 'project' AND target_id = ?", [$id]);
+    q('DELETE FROM projects WHERE id = ?', [$id]);
+}
+
+// ---------------------------------------------------------------- Sugestões de alteração em propostas
+
+function recount_suggestion(int $id): void
+{
+    $n = (int)val('SELECT COUNT(*) FROM suggestion_supports WHERE suggestion_id = ?', [$id]);
+    update('proposal_suggestions', ['support_count' => $n], 'id = :id', ['id' => $id]);
+}
+
+function delete_suggestion(int $id): void
+{
+    $s = one('SELECT * FROM proposal_suggestions WHERE id = ?', [$id]);
+    if (!$s) return;
+    delete_upload($s['image']);
+    delete_upload($s['image_thumb']);
+    q('DELETE FROM suggestion_supports WHERE suggestion_id = ?', [$id]);
+    q('DELETE FROM proposal_suggestions WHERE id = ?', [$id]);
+}
+
+/** Recalcula os contadores do alvo de um comentário. */
+function recount_target(string $type, int $id): void
+{
+    match ($type) {
+        'issue' => recount_issue($id),
+        'proposal' => recount_proposal($id),
+        'project' => recount_project($id),
+        default => null,
+    };
 }

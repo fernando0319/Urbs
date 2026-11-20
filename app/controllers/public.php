@@ -59,8 +59,8 @@ function transparency_page(): void
 
 function static_page(string $page): void
 {
-    $titles = ['sobre' => 'Sobre', 'regras' => 'Regras de participação', 'privacidade' => 'Política de privacidade', 'termos' => 'Termos de uso'];
-    render('pages/' . $page, ['title' => $titles[$page]]);
+    $titles = ['sobre' => 'Sobre', 'regras' => 'Regras de participação', 'privacidade' => 'Política de privacidade', 'termos' => 'Termos de uso', 'participar' => 'Como participar da vida da cidade'];
+    render('pages/' . $page, ['title' => $titles[$page], 'nav' => $page === 'participar' ? 'participate' : '']);
 }
 
 function offline_page(): void

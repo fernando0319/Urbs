@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 define('ROOT', dirname(__DIR__));
-define('URBS_VERSION', '0.1.0');
+define('URBS_VERSION', '0.2.0');
+define('SCHEMA_VERSION', 2); // aumente ao adicionar tabelas em app/schema/mysql.sql
 
 if (PHP_VERSION_ID < 80100) {
     http_response_code(500);
@@ -46,6 +47,14 @@ set_exception_handler(function (Throwable $e) use ($debug) {
             . '<h1>Algo deu errado</h1><p>Ocorreu um erro inesperado. Tente novamente em instantes.</p></div>';
     }
 });
+
+// Migração automática: o esquema só usa CREATE TABLE/INDEX IF NOT EXISTS, então reaplicá-lo é seguro.
+if ((int)setting('schema_version', '1') < SCHEMA_VERSION) {
+    foreach (db_schema_statements((string)config('db.driver', 'mysql')) as $stmt) {
+        db()->exec($stmt);
+    }
+    save_setting('schema_version', (string)SCHEMA_VERSION);
+}
 
 $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
     || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');

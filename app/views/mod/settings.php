@@ -9,6 +9,8 @@
   </div>
   <label>E-mail de contato (aparece nas páginas institucionais)<input type="email" name="contact_email" value="<?= e($values['contact_email']) ?>"></label>
   <label>Texto da página "Sobre" (opcional)<textarea name="about_text" rows="5"><?= e($values['about_text']) ?></textarea></label>
+  <label>Informações locais da página "Participar" (opcional)<textarea name="participation_text" rows="6" placeholder="Ex.: Lei municipal nº ... (Adote uma Praça). Ouvidoria: telefone/site. e-SIC: link. Sessões da Câmara: dias e horários. Conselhos e como participar."><?= e($values['participation_text']) ?></textarea>
+    <small class="hint">Aparece no topo da página "Participar". Links começados com https:// viram clicáveis.</small></label>
 
   <h2>Mapa</h2>
   <div class="row-3">

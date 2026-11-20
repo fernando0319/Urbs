@@ -1,7 +1,26 @@
 <?= partial('mod/_tabs', ['tab' => $tab, 'counts' => $counts]) ?>
 <p class="muted">Publicações de contas novas aguardam aqui. Verifique se há rostos, placas, dados pessoais, propaganda partidária ou conteúdo ofensivo. Recusas avisam o autor por e-mail com o motivo.</p>
 
-<?php if (!$issues && !$proposals): ?>
+<?php foreach ($projects as $pj): ?>
+<article class="card mod-item">
+  <div class="mod-item-head">
+    <span class="pill pill-warn">Projeto comunitário</span>
+    <a href="<?= e(url('/projetos/' . $pj['id'])) ?>"><strong><?= e($pj['title']) ?></strong></a>
+    <span class="muted small">por <?= e($pj['author_name']) ?> · organização: <?= e($pj['organization']) ?><?= $pj['organization_doc'] ? ' (CNPJ ' . e($pj['organization_doc']) . ')' : ' (sem CNPJ)' ?> · <?= e(time_ago($pj['created_at'])) ?></span>
+  </div>
+  <p><?= e(excerpt($pj['plan'], 400)) ?></p>
+  <p class="small"><strong>Natureza:</strong> <?= e(duty_types()[$pj['duty_type']][0] ?? '') ?> · <strong>Autorização:</strong> <?= e(auth_statuses()[$pj['auth_status']] ?? '') ?><?= $pj['goal_amount'] !== null ? ' · <strong>Meta:</strong> ' . e(money($pj['goal_amount'])) : '' ?></p>
+  <p class="small muted">Envolve dinheiro: confira se o plano é realista e se a organização existe. A verificação da organização é feita na página do projeto.</p>
+  <form method="post" action="<?= e(url('/moderacao/acao')) ?>" class="mod-actions">
+    <?= csrf_field() ?><input type="hidden" name="target_type" value="project"><input type="hidden" name="target_id" value="<?= (int)$pj['id'] ?>">
+    <input name="note" maxlength="500" placeholder="Motivo da recusa (enviado ao responsável)">
+    <button class="btn btn-sm btn-primary" name="action" value="approve"><?= icon('check') ?>Aprovar</button>
+    <button class="btn btn-sm btn-danger" name="action" value="reject"><?= icon('x') ?>Recusar</button>
+  </form>
+</article>
+<?php endforeach ?>
+
+<?php if (!$issues && !$proposals && !$projects): ?>
   <div class="empty"><?= icon('check', 'icon icon-xl') ?><p>Fila vazia. Bom trabalho!</p></div>
 <?php endif ?>
 
